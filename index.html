@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>リバーフローエディション体験版 | ロト潮流解析・予想支援</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg: #07070a;
+            --card: #111116;
+            --card-sub: #181822;
+            --border: #22222e;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            
+            --gold: #ffd700;
+            --gold-glow: rgba(255, 215, 0, 0.15);
+            --neon-blue: #00f2ff;
+            --neon-blue-glow: rgba(0, 242, 255, 0.15);
+            --hot: #ff4d4d;
+            --hot-glow: rgba(255, 77, 77, 0.15);
+            --cold: #3b82f6;
+            --cold-glow: rgba(59, 130, 246, 0.15);
+            --ex: #4b5563;
+        }
+
+        body {
+            font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* アプリコンテナ */
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 24px 16px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        header h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, #ffffff 40%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+        }
+
+        header .subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            margin-top: 6px;
+            text-transform: uppercase;
+        }
+
+        /* セレクター */
+        .selector-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .game-selector {
+            display: flex;
+            gap: 8px;
+        }
+
+        .game-btn {
+            flex: 1;
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 10px;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .game-btn:hover {
+            border-color: var(--gold);
+            color: var(--text-main);
+        }
+
+        .game-btn.active {
+            background: linear-gradient(135deg, var(--gold), #e0a900);
+            color: #000;
+            border-color: var(--gold);
+            box-shadow: 0 0 15px var(--gold-glow);
+        }
+
+        /* セレクトボックス */
+        select.custom-select {
+            width: 100%;
+            background: var(--card);
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            padding: 12px;
+            border-radius: 14px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            outline: none;
+            cursor: pointer;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* カード共通 */
+        .flow-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .flow-card.accent-border {
+            border-color: var(--gold);
+            box-shadow: 0 0 20px var(--gold-glow);
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* 数字グリッド */
+        .number-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .num-box {
+            width: 38px;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+        }
+
+        .hot-box { background: var(--hot-glow); color: var(--hot); border: 1px solid var(--hot); }
+        .cold-box { background: var(--cold-glow); color: var(--cold); border: 1px solid var(--cold); }
+        .ex-box { background: rgba(75, 85, 99, 0.1); color: var(--text-muted); border: 1px solid var(--ex); }
+        .latest-box { background: rgba(255, 255, 255, 0.03); color: #e5e7eb; border: 1px solid var(--border); }
+        .hit-circle {
+            background: var(--hot) !important;
+            color: #fff !important;
+            border-color: var(--hot) !important;
+            box-shadow: 0 0 12px var(--hot);
+            transform: scale(1.05);
+        }
+
+        /* 予測結果 */
+        .prediction-row {
+            background: var(--card-sub);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .prediction-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .pred-label {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: var(--gold);
+            min-width: 35px;
+        }
+
+        .prediction-nums {
+            display: flex;
+            gap: 6px;
+        }
+
+        .pred-box {
+            width: 30px;
+            height: 30px;
+            background: #000;
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pred-box:active {
+            transform: scale(0.9);
+            background: var(--gold);
+            color: #000;
+        }
+
+        .pred-score {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+
+        /* スマートフォン向け最適化 */
+        @media (max-width: 440px) {
+            header h1 {
+                font-size: 1.5rem;
+                letter-spacing: 1px;
+            }
+            header .subtitle {
+                font-size: 0.65rem;
+                letter-spacing: 1px;
+            }
+            .prediction-row {
+                padding: 12px;
+                gap: 8px;
+            }
+            .prediction-nums {
+                order: 3;
+                width: 100%;
+                justify-content: center;
+                gap: 4px;
+                margin-top: 4px;
+                border-top: 1px dashed rgba(255, 255, 255, 0.05);
+                padding-top: 8px;
+            }
+            .pred-box {
+                width: 28px;
+                height: 28px;
+                font-size: 0.75rem;
+            }
+            .pred-score {
+                text-align: right;
+            }
+        }
+
+        /* メインアクションボタン */
+        .btn-main {
+            width: 100%;
+            background: linear-gradient(135deg, var(--gold), #d4af37);
+            color: #000;
+            border: none;
+            padding: 15px;
+            border-radius: 16px;
+            font-size: 1rem;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 4px 15px var(--gold-glow);
+            transition: all 0.2s;
+        }
+
+        .btn-main:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .btn-main:active {
+            transform: translateY(0);
+        }
+
+        .btn-sub {
+            width: 100%;
+            background: var(--card-sub);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 14px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-sub:hover {
+            border-color: var(--text-muted);
+        }
+
+        /* 解析ログ */
+        .message-box {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-top: 10px;
+            font-style: italic;
+            border-left: 2px solid var(--gold);
+            padding-left: 10px;
+        }
+
+        /* 実績評価パネル */
+        .audit-panel {
+            background: rgba(255, 215, 0, 0.03);
+            border: 1px dashed var(--gold);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .audit-row {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .audit-title {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .audit-val {
+            font-size: 1.6rem;
+            color: var(--gold);
+            font-weight: 800;
+            text-shadow: 0 0 10px var(--gold-glow);
+        }
+
+        /* 免責オーバーレイ */
+        #disclaimerOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(4, 4, 6, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(8px);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .disclaimer-content {
+            width: 100%;
+            max-width: 440px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 24px;
+            box-sizing: border-box;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .disclaimer-title {
+            color: var(--gold);
+            font-size: 1.25rem;
+            font-weight: 800;
+            text-align: center;
+            margin: 0;
+        }
+
+        .disclaimer-text {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.8;
+            max-height: 260px;
+            overflow-y: auto;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 8px;
+        }
+
+        .disclaimer-text h4 {
+            color: var(--text-main);
+            margin: 12px 0 6px 0;
+        }
+
+        .disclaimer-text p {
+            margin: 0 0 8px 0;
+        }
+
+        /* 同期・管理セクション */
+        .management-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        /* ポップアップ・手動登録 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            backdrop-filter: blur(4px);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .modal-content {
+            width: 100%;
+            max-width: 400px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .modal-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--gold);
+            margin: 0;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+
+        .form-group input, .form-group textarea {
+            background: var(--card-sub);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 10px;
+            border-radius: 10px;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .form-group input:focus, .form-group textarea:focus {
+            border-color: var(--gold);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+        }
+
+        /* 案内テキスト */
+        .guide-link {
+            color: var(--neon-blue);
+            text-decoration: underline;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+
+        #resultArea {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .footer-note {
+            text-align: center;
+            color: #2b2b36;
+            font-size: 0.65rem;
+            margin-top: 20px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 免責・ライセンス同意画面 -->
+    <div id="disclaimerOverlay">
+        <div class="disclaimer-content">
+            <h3 class="disclaimer-title">⚠️ 利用規約 ＆ 免責事項</h3>
+            <div class="disclaimer-text">
+                <p>ロト予想支援システム「リバーフローエディション体験版」（以下、本ツール）をご利用いただく前に、以下の条項を必ずお読みください。本ツールの利用を開始した時点で、これらの条件に同意したものとみなされます。</p>
+                
+                <h4>1. 免責事項</h4>
+                <p>・本ツールは、過去の当選結果に基づく統計的解析（マルチEMA、シナジー効果、スパン周期など）から期待値の高い組み合わせの「傾向」を算出して支援するものであり、将来の当選を保証するものではありません。</p>
+                <p>・宝くじの購入はご自身の判断と責任において行ってください。本ツールの利用により生じたいかなる損害、不利益、損失に対しても、開発者および提供者は一切の責任を負いません。</p>
+                
+                <h4>2. MITライセンスに基づく配布</h4>
+                <p>本ツールはMITライセンスの条件に基づいて配布されています。</p>
+                <p>【許諾条件】<br>
+                このソフトウェアおよび関連文書ファイルのコピーを取得するすべての人に対し、ソフトウェアを無制限に扱うことを無償で許諾します。これには、ソフトウェアの使用、複製、変更、結合、掲載、頒布、サブライセンス、および/またはコピーの販売を行う権利、およびソフトウェアを提供する人々にそれを許可する権利が含まれます。</p>
+                <p>【免責の明記】<br>
+                ソフトウェアは「現状のまま」提供され、商品性、特定の目的への適合性、および非侵害性に関する保証を含むがこれらに限定されない、明示または黙示を問わないいかなる種類の保証もありません。作者または著作権ホルダーは、ソフトウェアまたはソフトウェアの使用に起因して生じた責任に対していかなる責任も負いません。</p>
+            </div>
+            <button class="btn-main" onclick="agreeDisclaimer()">同意して利用を開始する</button>
+        </div>
+    </div>
+
+    <!-- メインアプリケーション画面 -->
+    <div class="app-container" id="appContainer" style="display: none;">
+        <header>
+            <h1>RIVER_FLOW_EDITION</h1>
+            <div class="subtitle">ロト予想潮流解析・体験版</div>
+        </header>
+
+        <!-- セレクター設定エリア -->
+        <div class="selector-group">
+            <div class="game-selector">
+                <button class="game-btn active" onclick="selectGame('loto6', this)">LOTO 6</button>
+                <button class="game-btn" onclick="selectGame('loto7', this)">LOTO 7</button>
+                <button class="game-btn" onclick="selectGame('miniloto', this)">MINI LOTO</button>
+            </div>
+            
+            <select id="predLimit" class="custom-select">
+                <option value="1">予想口数: 1点勝負 (最強厳選)</option>
+                <option value="3">予想口数: 3点買い (推奨)</option>
+                <option value="5" selected>予想口数: 5点買い (バランス)</option>
+                <option value="10">予想口数: 10点買い (広域カバー)</option>
+            </select>
+        </div>
+
+        <!-- メイン実行ボタン -->
+        <button class="btn-main" onclick="runAnalysis()">潮流解析 ＆ 予想生成 を実行</button>
+
+        <!-- 管理系ボタン -->
+        <div class="management-group">
+            <button class="btn-sub" onclick="openImportModal()">最新結果をインポート（コピペ／手入力）</button>
+            <button class="btn-sub" onclick="exportUserData()" style="opacity: 0.6; font-size: 0.75rem;">ユーザー追加データのバックアップ書き出し</button>
+        </div>
+
+        <!-- 解析結果表示エリア -->
+        <div id="resultArea" style="display: none;">
+            
+            <!-- 的中評価パネル -->
+            <div class="audit-panel">
+                <div class="audit-row">
+                    <span class="audit-title">前回の抽出候補（HOT/COLD）の実績</span>
+                    <span class="audit-val" id="hitCount">0</span>
+                    <span class="audit-title" style="font-size: 0.65rem;">個の当選本数字が候補内に含まれていました</span>
+                </div>
+                
+                <div style="padding-top: 10px; border-top: 1px dashed var(--border);">
+                    <div class="audit-row">
+                        <span class="audit-title">前回生成した厳選予想の最高的中結果</span>
+                        <span class="audit-val" id="predHitCount" style="color: var(--hot); font-size: 1.2rem;">0</span>
+                        <span class="audit-title" id="predHitNums" style="font-family: monospace; font-size: 0.75rem;">(-)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 厳選予想リスト -->
+            <div class="flow-card accent-border">
+                <div class="section-title" style="color: var(--gold);">
+                    <span style="font-size: 1.1rem;">🚀</span> 厳選・特選予想 (SMART PREDICTIONS)
+                </div>
+                <div id="predictionList"></div>
+                <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 12px; text-align: center; font-style: italic;">
+                    ※タップするとクリップボードにコピーできます。
+                </div>
+            </div>
+
+            <!-- 最新データの基点 -->
+            <div class="flow-card">
+                <div class="section-title" style="color: var(--text-main);">
+                    <span>📊</span> 解析の基点: 第<span id="latestRound">-</span>回 (<span id="latestDate">-</span>)
+                </div>
+                <div class="number-grid" id="latestGrid"></div>
+            </div>
+
+            <!-- 灼熱 (HOT) -->
+            <div class="flow-card">
+                <div class="section-title" style="color: var(--hot);">
+                    <span>🔥</span> 灼熱 (HOT) - 潮流EMA・シナジー優遇
+                </div>
+                <div class="number-grid" id="hotGrid"></div>
+                <div class="message-box" id="flowMsg"></div>
+            </div>
+
+            <!-- 氷結 (COLD) -->
+            <div class="flow-card">
+                <div class="section-title" style="color: var(--cold);">
+                    <span>❄️</span> 氷結 (COLD) - 長期未出現・収束期待
+                </div>
+                <div class="number-grid" id="coldGrid"></div>
+            </div>
+
+            <!-- 停滞 (EXCLUDED) -->
+            <div class="flow-card">
+                <div class="section-title" style="color: var(--text-muted);">
+                    <span>✖️</span> 停滞 (EXCLUDED) - 除外推奨
+                </div>
+                <div class="number-grid" id="exGrid"></div>
+            </div>
+
+        </div>
+
+        <div class="footer-note">Powered by RIVER_FLOW_EDITION Smart Combinator</div>
+    </div>
+
+    <!-- インポート用モーダル -->
+    <div id="importModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h4 class="modal-title">最新結果の登録・更新</h4>
+            
+            <div style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">
+                <span class="guide-link" onclick="window.open('https://www.mizuho-bank.co.jp/takarakuji/loto/index.html', '_blank')">みずほ銀行の当選案内ページ</span> などの当選テキストをコピーして貼り付けるか、直接入力してください。
+            </div>
+
+            <div class="form-group">
+                <label>【スマートコピペ】当選情報を貼り付け</label>
+                <textarea id="rawTextImport" rows="3" placeholder="（例）第1851回 抽選日 2026/06/01&#10;当選番号: 03, 11, 24, 27, 33, 40 (ボーナス 08)"></textarea>
+                <button class="btn-sub" onclick="processSmartImport()" style="background: var(--neon-blue-glow); border-color: var(--neon-blue); color: var(--neon-blue); padding: 8px;">コピペから自動判別して登録</button>
+            </div>
+
+            <div style="text-align: center; color: var(--border); font-size: 0.8rem; margin: 5px 0;">ー または個別に入力 ー</div>
+
+            <div class="form-group">
+                <label>開催回数 (数値のみ)</label>
+                <input type="number" id="manualRound" placeholder="例: 1851">
+            </div>
+
+            <div class="form-group">
+                <label>開催日 (年/月/日)</label>
+                <input type="text" id="manualDate" placeholder="例: 2026/06/01">
+            </div>
+
+            <div class="form-group">
+                <label>本数字 (カンマ区切り)</label>
+                <input type="text" id="manualNumbers" placeholder="例: 3, 11, 24, 27, 33, 40">
+            </div>
+
+            <div class="form-group">
+                <label>ボーナス数字 (カンマ区切り)</label>
+                <input type="text" id="manualBonus" placeholder="例: 8">
+            </div>
+
+            <div class="modal-buttons">
+                <button class="btn-main" onclick="processManualImport()">手動で追加</button>
+                <button class="btn-sub" onclick="closeImportModal()">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 過去データ読み込みスクリプト -->
+    <script src="loto_data.js"></script>
+    
+    <script>
+        // ゲーム別の設定
+        const GAME_CONFIG = {
+            loto6: {
+                maxVal: 43,
+                pick: 6,
+                goldenZone: [132, 164],
+                parityRange: [2, 3, 4],
+                lowHighRange: [2, 3, 4],
+                sumFlex: 0.25,
+                hotSize: 8,
+                coldCount: 4,
+                exclude_count: 5
+            },
+            loto7: {
+                maxVal: 37,
+                pick: 7,
+                goldenZone: [113, 153],
+                parityRange: [3, 4],
+                lowHighRange: [3, 4],
+                sumFlex: 0.25,
+                hotSize: 12,
+                coldCount: 4,
+                exclude_count: 5
+            },
+            miniloto: {
+                maxVal: 31,
+                pick: 5,
+                goldenZone: [65, 95],
+                parityRange: [2, 3],
+                lowHighRange: [2, 3],
+                sumFlex: 0.30,
+                hotSize: 7,
+                coldCount: 3,
+                exclude_count: 3
+            }
+        };
+
+        let selectedGame = 'loto6';
+        let customHistory = { loto6: [], loto7: [], miniloto: [] };
+
+        // 過去データのオンライン同期処理 (共通タワーデータからフォールバック)
+        async function fetchLatestLotteryData(game) {
+            const urls = {
+                loto6: 'https://tk030-lotto.github.io/common-divisor-lite/data/loto6.json',
+                loto7: 'https://tk030-lotto.github.io/common-divisor-lite/data/loto7.json',
+                miniloto: 'https://tk030-lotto.github.io/common-divisor-lite/data/miniloto.json'
+            };
+            if (!urls[game]) return;
+            try {
+                console.log('Fetching latest data for ' + game + '...');
+                const response = await fetch(urls[game]);
+                if (!response.ok) throw new Error('HTTP error! status: ' + response.status);
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    LOTO_INIT_DATA[game] = data;
+                    console.log('Successfully synced ' + game + '.');
+                }
+            } catch(err) {
+                console.warn('Failed to sync ' + game + ': ' + err.message);
+            }
+        }
+
+        // 初期化
+        window.addEventListener('DOMContentLoaded', async () => {
+            loadLocalHistory();
+            await fetchLatestLotteryData('loto6');
+        });
+
+        // 利用規約同意
+        function agreeDisclaimer() {
+            document.getElementById('disclaimerOverlay').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'flex';
+        }
+
+        // ゲーム切り替え
+        async function selectGame(game, el) {
+            selectedGame = game;
+            document.querySelectorAll('.game-btn').forEach(btn => btn.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('resultArea').style.display = 'none';
+            await fetchLatestLotteryData(game);
+        }
+
+        // localStorageからユーザーデータをロード
+        function loadLocalHistory() {
+            const stored = localStorage.getItem('loto_flow_custom_data');
+            if (stored) {
+                try {
+                    customHistory = JSON.parse(stored);
+                } catch(e) {
+                    console.error("Local data parsing error", e);
+                }
+            }
+        }
+
+        // データのローカルセーブ
+        function saveLocalHistory() {
+            localStorage.setItem('loto_flow_custom_data', JSON.stringify(customHistory));
+        }
+
+        // バックアップ書き出し
+        function exportUserData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(customHistory, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "loto_flow_backup.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        // マージされた履歴を取得 (初期データ + ユーザー追加分)
+        function getMergedHistory(game) {
+            const initData = LOTO_INIT_DATA[game] || [];
+            const userAdded = customHistory[game] || [];
+            
+            const map = new Map();
+            initData.forEach(item => map.set(item.round, item));
+            userAdded.forEach(item => map.set(item.round, item));
+            
+            const merged = Array.from(map.values());
+            merged.sort((a, b) => b.round - a.round);
+            return merged;
+        }
+
+        // EMA算出
+        function calculateEMA(series, span) {
+            if (!series || series.length === 0) return 0.0;
+            const alpha = 2.0 / (span + 1);
+            let val = series[0];
+            for (let i = 1; i < series.length; i++) {
+                val = alpha * series[i] + (1 - alpha) * val;
+            }
+            return val;
+        }
+
+        // 簡易シナジー計算
+        function getSynergyScore(n1, pool, synergyMap) {
+            let score = 0.0;
+            pool.forEach(n2 => {
+                if (n1 === n2) return;
+                const key = [n1, n2].sort((a,b)=>a-b).join(',');
+                score += synergyMap.get(key) || 0;
+            });
+            return score;
+        }
+
+        // 川の流れ解析（RIVER-F 独自・マルチEMA × シナジー × スライド連鎖版）
+        function calcFlowScores(history, game) {
+            const config = GAME_CONFIG[game];
+            const maxVal = config.maxVal;
+            const numRange = Array.from({length: maxVal}, (_, i) => i + 1);
+
+            const finalScores = {};
+            numRange.forEach(n => finalScores[n] = 0.0);
+
+            if (history.length < 30) {
+                numRange.forEach(n => finalScores[n] = 1.0);
+                return { scores: finalScores, gaps: {}, synergyMap: new Map() };
+            }
+
+            const latestDraw = history[0];
+            const latestNums = latestDraw.numbers;
+
+            // 1. データの数値化 (時系列: 古い順)
+            const timeSeries = {};
+            numRange.forEach(i => {
+                timeSeries[i] = history.slice(0, 50).reverse().map(draw => draw.numbers.includes(i) ? 1.0 : 0.0);
+            });
+
+            // 2. マルチEMA収束解析 (短期 5 / 中期 15)
+            const momenta = {};
+            numRange.forEach(i => {
+                const shortEma = calculateEMA(timeSeries[i], 5);
+                const midEma = calculateEMA(timeSeries[i], 15);
+                const velocity = shortEma - midEma;
+                momenta[i] = shortEma + velocity;
+            });
+
+            // 3. 簡易シナジーマトリックス構築 (直近50回)
+            const synergyMap = new Map();
+            history.slice(0, 50).forEach(draw => {
+                const nums = [...draw.numbers].sort((a,b)=>a-b);
+                for (let i = 0; i < nums.length; i++) {
+                    for (let j = i + 1; j < nums.length; j++) {
+                        const key = `${nums[i]},${nums[j]}`;
+                        synergyMap.set(key, (synergyMap.get(key) || 0) + 1);
+                    }
+                }
+            });
+
+            // 4. 空白期間 (Gap)
+            const gaps = {};
+            numRange.forEach(i => gaps[i] = 999);
+            history.forEach((draw, idx) => {
+                draw.numbers.forEach(n => {
+                    if (gaps[n] === 999) gaps[n] = idx;
+                });
+            });
+
+            // 5. 総合スコアリング
+            const sortedByMomenta = Array.from({length: maxVal}, (_, i) => i + 1)
+                .sort((a, b) => momenta[b] - momenta[a]);
+            const initialHot = new Set(sortedByMomenta.slice(0, config.hotSize * 2));
+
+            numRange.forEach(i => {
+                let score = momenta[i];
+                if (initialHot.has(i)) {
+                    score += getSynergyScore(i, Array.from(initialHot), synergyMap) * 0.05;
+                }
+                
+                // 長期欠損(Cold)補正
+                const expectedInterval = maxVal / config.pick;
+                if (gaps[i] > expectedInterval * 2.5) {
+                    score += 0.15;
+                }
+
+                // スライド連鎖 (前回数字の隣)
+                latestNums.forEach(prev => {
+                    if (Math.abs(i - prev) === 1) {
+                        score += 0.05;
+                    }
+                });
+
+                finalScores[i] = score;
+            });
+
+            return {
+                scores: finalScores,
+                gaps: gaps,
+                synergyMap: synergyMap
+            };
+        }
+
+        // コネクティビティ・シナジーフィルタ (スマートコンビネーター)
+        class SmartCombinator {
+            constructor(game) {
+                this.game = game;
+                this.config = GAME_CONFIG[game];
+                this.pick = this.config.pick;
+                this.maxVal = this.config.maxVal;
+            }
+
+            isValid(combo, lastNums) {
+                // 1. 奇偶
+                const odds = combo.filter(n => n % 2 !== 0).length;
+                if (!this.config.parityRange.includes(odds)) return false;
+
+                // 2. 高低
+                const mid = Math.floor(this.maxVal / 2);
+                const lows = combo.filter(n => n <= mid).length;
+                if (!this.config.lowHighRange.includes(lows)) return false;
+
+                // 3. 合計値
+                const expectedSum = ((1 + this.maxVal) / 2) * this.pick;
+                const actualSum = combo.reduce((a, b) => a + b, 0);
+                const flex = this.config.sumFlex;
+                if (actualSum < expectedSum * (1 - flex) || actualSum > expectedSum * (1 + flex)) return false;
+
+                // 4. 連続数字制限 (3連続以上は除外)
+                let consecutive = 0;
+                for (let i = 0; i < combo.length - 1; i++) {
+                    if (combo[i+1] - combo[i] === 1) {
+                        consecutive++;
+                    } else {
+                        consecutive = 0;
+                    }
+                    if (consecutive >= 2) return false;
+                }
+
+                // 5. 引っ張り重複制限 (3つ以上被りは除外)
+                if (lastNums) {
+                    const intersect = combo.filter(n => lastNums.includes(n)).length;
+                    if (intersect >= 3) return false;
+                }
+
+                return true;
+            }
+
+            getCombinations(array, size) {
+                const result = [];
+                function helper(start, combo) {
+                    if (combo.length === size) {
+                        result.push([...combo]);
+                        return;
+                    }
+                    for (let i = start; i < array.length; i++) {
+                        combo.push(array[i]);
+                        helper(i + 1, combo);
+                        combo.pop();
+                    }
+                }
+                helper(0, []);
+                return result;
+            }
+
+            generateAndRank(hot, cold, synergyMap, finalScores, limit = 5, lastNums = null) {
+                const pool = Array.from(new Set([...hot, ...cold])).sort((a,b) => a-b);
+                if (pool.length < this.pick) return [];
+
+                const allCombos = this.getCombinations(pool, this.pick);
+                const scoredCombos = [];
+
+                allCombos.forEach(combo => {
+                    if (!this.isValid(combo, lastNums)) return;
+
+                    const baseScore = combo.reduce((sum, n) => sum + (finalScores[n] || 0.0), 0);
+                    
+                    let synergyScore = 0;
+                    for (let i = 0; i < combo.length; i++) {
+                        for (let j = i + 1; j < combo.length; j++) {
+                            const key = [combo[i], combo[j]].sort((a,b)=>a-b).join(',');
+                            synergyScore += synergyMap.get(key) || 0;
+                        }
+                    }
+
+                    const totalScore = baseScore + (synergyScore * 0.2);
+                    scoredCombos.push({
+                        numbers: combo,
+                        score: totalScore
+                    });
+                });
+
+                scoredCombos.sort((a, b) => b.score - a.score);
+                return scoredCombos.slice(0, limit);
+            }
+        }
+
+        // 解析実行
+        function runAnalysis() {
+            const limit = parseInt(document.getElementById('predLimit').value) || 5;
+            const history = getMergedHistory(selectedGame);
+            
+            if (history.length === 0) {
+                alert("当選履歴データが空です。最新結果をインポートしてください。");
+                return;
+            }
+
+            const config = GAME_CONFIG[selectedGame];
+            const maxVal = config.maxVal;
+
+            // 1. スコア・空白期間・シナジー算出
+            const flowData = calcFlowScores(history, selectedGame);
+            const scores = flowData.scores;
+            const gaps = flowData.gaps;
+            const synergyMap = flowData.synergyMap;
+
+            // 2. 候補の分類
+            // HOT (総合スコア上位N個)
+            const sortedByScore = Array.from({length: maxVal}, (_, i) => i + 1)
+                .sort((a, b) => scores[b] - scores[a]);
+            const hot = sortedByScore.slice(0, config.hotSize);
+
+            // COLD (非HOTからスパン上位N個)
+            const coldPool = Array.from({length: maxVal}, (_, i) => i + 1).filter(n => !hot.includes(n));
+            const cold = coldPool.sort((a, b) => gaps[b] - gaps[a]).slice(0, config.coldCount);
+
+            // EXCLUDED (前回当選本数字の中から、今回の期待値が低い順に抽出)
+            const latestDraw = history[0];
+            const latestNums = latestDraw.numbers;
+            const excludedCandidates = latestNums.filter(n => !hot.includes(n));
+            const excluded = excludedCandidates.sort((a, b) => scores[a] - scores[b]).slice(0, config.exclude_count);
+
+            // 3. 厳選予想の生成
+            const combinator = new SmartCombinator(selectedGame);
+            const predictions = combinator.generateAndRank(
+                hot, cold, synergyMap, scores, limit, latestNums
+            );
+
+            // 4. 答え合わせ (前回の実績)
+            let lastHits = 0;
+            let lastHitList = [];
+            if (history.length >= 2) {
+                const hits = latestNums.filter(n => history[1].numbers.includes(n));
+                lastHits = hits.length;
+                lastHitList = hits;
+            }
+
+            // 5. 前回予測の最高的中検証
+            let pastPredBestMatch = 0;
+            let pastPredBestNums = [];
+            if (history.length >= 2) {
+                const pastHistory = history.slice(1);
+                const pastFlow = calcFlowScores(pastHistory, selectedGame);
+                const pastScores = pastFlow.scores;
+                const pastGaps = pastFlow.gaps;
+                const pastSynergy = pastFlow.synergyMap;
+
+                const pastSorted = Array.from({length: maxVal}, (_, i) => i + 1)
+                    .sort((a, b) => pastScores[b] - pastScores[a]);
+                const pastHot = pastSorted.slice(0, config.hotSize);
+                const pastColdPool = Array.from({length: maxVal}, (_, i) => i + 1).filter(n => !pastHot.includes(n));
+                const pastCold = pastColdPool.sort((a, b) => pastGaps[b] - pastGaps[a]).slice(0, config.coldCount);
+
+                const pastPredictions = combinator.generateAndRank(
+                    pastHot, pastCold, pastSynergy, pastScores, limit, pastHistory[0].numbers
+                );
+
+                pastPredictions.forEach(pred => {
+                    const matches = pred.numbers.filter(n => latestNums.includes(n));
+                    if (matches.length > pastPredBestMatch) {
+                        pastPredBestMatch = matches.length;
+                        pastPredBestNums = pred.numbers;
+                    }
+                });
+            }
+
+            // --- 画面への描画 ---
+            renderPredictions(predictions);
+            renderGrid('hotGrid', hot.sort((a,b)=>a-b), 'hot-box');
+            renderGrid('coldGrid', cold.sort((a,b)=>a-b), 'cold-box');
+            renderGrid('exGrid', excluded.sort((a,b)=>a-b), 'ex-box');
+
+            document.getElementById('flowMsg').innerText = `RIVER-FLOW潮流解析: 最新第${latestDraw.round}回の潮流をマルチEMA収束、シナジーマトリックス、および空白期間・隣接スライド連鎖で分析。ブレンド期待値の算出が完了しました。`;
+            document.getElementById('hitCount').innerText = lastHits;
+            
+            document.getElementById('predHitCount').innerText = `${pastPredBestMatch} 個的中`;
+            document.getElementById('predHitNums').innerText = pastPredBestNums.length > 0 ? `(${pastPredBestNums.join(', ')})` : '(-)';
+
+            // 解析基点データ
+            document.getElementById('latestRound').innerText = latestDraw.round;
+            document.getElementById('latestDate').innerText = latestDraw.date || '日付不明';
+            
+            const grid = document.getElementById('latestGrid');
+            grid.innerHTML = '';
+            latestDraw.numbers.forEach(n => {
+                const box = document.createElement('div');
+                box.className = 'num-box latest-box';
+                if (lastHitList.includes(n)) {
+                    box.classList.add('hit-circle');
+                }
+                box.innerText = n;
+                grid.appendChild(box);
+            });
+
+            document.getElementById('resultArea').style.display = 'flex';
+        }
+
+        // 予測リストの描画
+        function renderPredictions(preds) {
+            const container = document.getElementById('predictionList');
+            if (!preds || preds.length === 0) {
+                container.innerHTML = '<div style="text-align:center; font-size:0.8rem; color:var(--text-muted); padding:10px;">Codexフィルターを通過した買い目がありません。予想口数を増やすか、手動でデータを更新してください。</div>';
+                return;
+            }
+
+            container.innerHTML = preds.map((p, i) => {
+                const formattedNums = p.numbers.map(n => n < 10 ? '0' + n : n).join(', ');
+                return `
+                    <div class="prediction-row" onclick="copyToClipboard('${formattedNums}', this)">
+                        <div class="pred-label">案 ${i + 1}</div>
+                        <div class="prediction-nums">
+                            ${p.numbers.map(n => `<div class="pred-box">${n < 10 ? '0' + n : n}</div>`).join('')}
+                        </div>
+                        <div class="pred-score">Score: ${p.score.toFixed(1)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // グリッドの描画
+        function renderGrid(id, nums, className) {
+            const container = document.getElementById(id);
+            container.innerHTML = nums.map(n => `<div class="num-box ${className}">${n}</div>`).join('');
+        }
+
+        // クリップボードコピー
+        function copyToClipboard(text, element) {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalBg = element.style.background;
+                element.style.background = 'var(--gold-glow)';
+                setTimeout(() => {
+                    element.style.background = originalBg;
+                }, 400);
+            }).catch(err => {
+                console.error("Copy failed", err);
+            });
+        }
+
+        // --- モーダル制御 ---
+        function openImportModal() {
+            document.getElementById('importModal').style.display = 'flex';
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').style.display = 'none';
+            document.getElementById('rawTextImport').value = '';
+            document.getElementById('manualRound').value = '';
+            document.getElementById('manualDate').value = '';
+            document.getElementById('manualNumbers').value = '';
+            document.getElementById('manualBonus').value = '';
+        }
+
+        // スマートコピペ
+        function processSmartImport() {
+            const rawText = document.getElementById('rawTextImport').value;
+            if (!rawText.trim()) {
+                alert("コピペ用のテキストを入力してください。");
+                return;
+            }
+
+            try {
+                const roundMatch = rawText.match(/(?:第\s*)?(\d+)\s*回/);
+                if (!roundMatch) throw new Error("回号（例：第◯◯回）が検出できませんでした。");
+                const round = parseInt(roundMatch[1]);
+
+                let date = "手入力";
+                const dateMatch = rawText.match(/(\d{4}[\/\-年]\d{1,2}[\/\-月]\d{1,2}日?)/);
+                if (dateMatch) {
+                    date = dateMatch[1].replace(/年|月/g, '/').replace(/日/g, '');
+                }
+
+                let bonus = [];
+                const bonusMatch = rawText.match(/(?:ボーナス|bonus|特|補|[^a-zA-Z0-9]\s*)(\d{1,2})(?!\d)/i);
+                if (bonusMatch) {
+                    bonus.push(parseInt(bonusMatch[1]));
+                }
+
+                const allNumbers = [];
+                const regex = /(?<!\d)(\d{1,2})(?!\d)/g;
+                let match;
+                while ((match = regex.exec(rawText)) !== null) {
+                    const val = parseInt(match[1]);
+                    if (bonus.length > 0 && val === bonus[0]) continue;
+                    allNumbers.push(val);
+                }
+
+                let numbers = Array.from(new Set(allNumbers)).sort((a,b) => a-b);
+                const config = GAME_CONFIG[selectedGame];
+
+                if (numbers.length > config.pick) {
+                    numbers = numbers.slice(0, config.pick);
+                }
+
+                if (numbers.length !== config.pick) {
+                    throw new Error(`当選本数字が ${config.pick} 個正しく検出できませんでした。(検出数: ${numbers.length}個)`);
+                }
+
+                addRecord(selectedGame, round, date, numbers, bonus);
+                alert(`第 ${round} 回 (${date}) を登録しました！\n本数字: [${numbers.join(', ')}] ボーナス: [${bonus.join(', ')}]`);
+                closeImportModal();
+                runAnalysis();
+
+            } catch (e) {
+                alert(`自動解析に失敗しました: ${e.message}\nお手数ですが下部の「手動入力」からご登録ください。`);
+            }
+        }
+
+        // 手動追加
+        function processManualImport() {
+            const roundInput = document.getElementById('manualRound').value;
+            const dateInput = document.getElementById('manualDate').value || "手入力";
+            const numbersInput = document.getElementById('manualNumbers').value;
+            const bonusInput = document.getElementById('manualBonus').value;
+
+            if (!roundInput || !numbersInput) {
+                alert("開催回と本数字は必須入力です。");
+                return;
+            }
+
+            const round = parseInt(roundInput);
+            const numbers = numbersInput.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n)).sort((a,b)=>a-b);
+            const bonus = bonusInput.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+
+            const config = GAME_CONFIG[selectedGame];
+            if (numbers.length !== config.pick) {
+                alert(`本数字はカンマ区切りで ${config.pick} 個入力してください。`);
+                return;
+            }
+
+            if (numbers.some(n => n < 1 || n > config.maxVal)) {
+                alert(`数字は 1 〜 ${config.maxVal} の範囲で入力してください。`);
+                return;
+            }
+
+            addRecord(selectedGame, round, dateInput, numbers, bonus);
+            alert(`第 ${round} 回を手動追加しました。`);
+            closeImportModal();
+            runAnalysis();
+        }
+
+        // レコード追加＆保存
+        function addRecord(game, round, date, numbers, bonus) {
+            if (!customHistory[game]) customHistory[game] = [];
+            customHistory[game] = customHistory[game].filter(item => item.round !== round);
+            customHistory[game].push({
+                round: round,
+                date: date,
+                numbers: numbers,
+                bonus: bonus
+            });
+            saveLocalHistory();
+        }
+    </script>
+    <!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "b7f74bde365b4aa480344eac948b7e6b"}'></script><!-- End Cloudflare Web Analytics -->
+</body>
+</html>
