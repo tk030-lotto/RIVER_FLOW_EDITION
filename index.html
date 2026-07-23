@@ -364,6 +364,44 @@
             margin-top: 10px;
         }
 
+        .drop-zone {
+            border: 2px dashed var(--accent);
+            border-radius: 14px;
+            padding: 20px 10px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: rgba(0, 242, 255, 0.02);
+            margin-top: 10px;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(0, 242, 255, 0.05);
+            color: var(--text-main);
+        }
+        .status-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+        .status-badge {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #4b5563;
+            border-radius: 50%;
+        }
+        .status-badge.online {
+            background-color: #10b981;
+            box-shadow: 0 0 8px #10b981;
+        }
+
         /* ===== Numbers用 結果エリア ===== */
         #resultArea { display: flex; flex-direction: column; gap: 20px; }
 
@@ -402,6 +440,10 @@
             <h1>RIVER FLOW</h1>
             <div class="subtitle">Flow Analysis Edition</div>
             <div class="badge">体験版 / FREE</div>
+            <div class="status-container">
+                <span class="status-badge" id="status-badge"></span>
+                <span id="status-text">オフライン (ローカル)</span>
+            </div>
         </header>
 
         <!-- ゲーム選択 -->
@@ -483,9 +525,16 @@
         <div class="modal-content">
             <h4 class="modal-title">最新結果の登録</h4>
             <div style="font-size:0.72rem; color:var(--text-muted); line-height:1.5;">
-                <span class="guide-link" onclick="window.open('https://www.mizuho-bank.co.jp/takarakuji/check/','_blank')">みずほ銀行 当選番号ページ</span> などのテキストを貼り付けるか、直接入力してください。
+                過去の当選結果データをインポートします。手動で入力するか、CSVファイルをドロップしてください。
             </div>
-            <div class="form-group">
+            
+            <!-- 過去データCSVドラッグ＆ドロップエリア -->
+            <div id="drop-zone" class="drop-zone">
+                ここにCSVファイルをドラッグ＆ドロップ、<br>またはクリックして選択
+                <input type="file" id="file-input" accept=".csv" style="display: none;">
+            </div>
+
+            <div class="form-group" style="margin-top: 10px;">
                 <label>【スマートコピペ】当選テキストをそのまま貼り付け</label>
                 <textarea id="rawTextImport" rows="3" placeholder="（例）第1851回 抽選日 2026/06/01&#10;当選番号: 03, 11, 24, 27, 33, 40 (ボーナス 08)"></textarea>
                 <button class="btn-sub" onclick="processSmartImport()" style="background:var(--accent-glow); border-color:var(--accent); color:var(--accent); padding:8px; font-size:0.8rem;">コピペから自動判別して登録</button>
@@ -536,8 +585,9 @@
         let customHistory = { loto6: [], loto7: [], miniloto: [], numbers3: [], numbers4: [] };
 
         /* ---------- 初期化 ---------- */
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
             loadLocalHistory();
+            await fetchLatestLotteryData(selectedGame);
         });
 
         function agreeDisclaimer() {
@@ -545,11 +595,12 @@
             document.getElementById('appContainer').style.display = 'flex';
         }
 
-        function selectGame(game, el) {
+        async function selectGame(game, el) {
             selectedGame = game;
             document.querySelectorAll('.game-btn').forEach(b => b.classList.remove('active'));
             el.classList.add('active');
             document.getElementById('resultArea').style.display = 'none';
+            await fetchLatestLotteryData(game);
         }
 
         /* ---------- localStorage ---------- */
@@ -807,6 +858,7 @@
         /* ---------- インポートモーダル ---------- */
         function openImportModal() {
             document.getElementById('importModal').style.display = 'flex';
+            setTimeout(initCSVImport, 100);
         }
 
         function closeImportModal() {
@@ -884,6 +936,245 @@
             customHistory[game] = customHistory[game].filter(item => item.round !== round);
             customHistory[game].push({ round, date, numbers, bonus });
             saveLocalHistory();
+        }
+
+        // 独立したデータハブから最新データをフェッチする
+        async function fetchLatestLotteryData(game) {
+            const badge = document.getElementById("status-badge");
+            const text = document.getElementById("status-text");
+            if (!badge || !text) return;
+
+            try {
+                badge.className = "status-badge";
+                text.textContent = "同期中...";
+                
+                const response = await fetch(`https://tk030-lotto.github.io/lotto-data-hub/data/${game}.json`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    if (typeof LOTO_INIT_DATA === 'undefined') {
+                        LOTO_INIT_DATA = {};
+                    }
+                    LOTO_INIT_DATA[game] = data;
+                    badge.className = "status-badge online";
+                    text.textContent = "同期済み (自動更新)";
+                    console.log(`Successfully synced ${game} with latest data.`);
+                }
+            } catch (err) {
+                console.warn(`Failed to fetch latest data for ${game}: ${err.message}. Using offline preloaded data.`);
+                badge.className = "status-badge";
+                text.textContent = "オフライン (ローカル)";
+            }
+        }
+
+        // CSVファイルドラッグ＆ドロップ用エンジン
+        function handleCSVFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const buffer = e.target.result;
+                const view = new Uint8Array(buffer);
+                let isUTF8 = true;
+                
+                for (let i = 0; i < Math.min(view.length, 1000); i++) {
+                    if (view[i] > 127) {
+                        if ((view[i] & 0xE0) === 0xC0) {
+                            if (i + 1 < view.length && (view[i+1] & 0xC0) === 0x80) { i++; continue; }
+                        } else if ((view[i] & 0xF0) === 0xE0) {
+                            if (i + 2 < view.length && (view[i+1] & 0xC0) === 0x80 && (view[i+2] & 0xC0) === 0x80) { i += 2; continue; }
+                        }
+                        isUTF8 = false;
+                        break;
+                    }
+                }
+                
+                const decoder = new TextDecoder(isUTF8 ? "utf-8" : "shift-jis");
+                const textStr = decoder.decode(view);
+                
+                try {
+                    parseCSVText(textStr, file.name);
+                } catch (err) {
+                    alert("CSVのパースに失敗しました。ファイル形式が正しいかご確認ください。\nエラー: " + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function parseCSVText(text, filename) {
+            const lines = text.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
+            if (lines.length < 1) throw new Error("データ行が足りません。");
+            
+            function splitCSVLine(line) {
+                const result = [];
+                let current = '';
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(current.trim().replace(/^"|"$/g, "").replace(/^='(.*)'$/, "$1").replace(/^="(.+?)"$/, "$1"));
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                result.push(current.trim().replace(/^"|"$/g, "").replace(/^='(.*)'$/, "$1").replace(/^="(.+?)"$/, "$1"));
+                return result;
+            }
+
+            const firstRow = splitCSVLine(lines[0]);
+            
+            let hasHeader = false;
+            let roundIdx = firstRow.findIndex(h => h.includes("回") || h.toLowerCase().includes("round") || h.includes("号"));
+            let dateIdx = firstRow.findIndex(h => h.includes("日") || h.toLowerCase().includes("date") || h.includes("付"));
+            
+            if (roundIdx !== -1) {
+                hasHeader = true;
+            } else {
+                roundIdx = 0;
+                dateIdx = 1;
+            }
+
+            // くじ種の自動判定
+            let detectedGame = selectedGame;
+            const fullText = (filename + " " + lines.slice(0, 3).join(" ")).toLowerCase();
+            
+            if (fullText.includes("ロト6") || fullText.includes("loto6")) {
+                detectedGame = "loto6";
+            } else if (fullText.includes("ロト7") || fullText.includes("loto7")) {
+                detectedGame = "loto7";
+            } else if (fullText.includes("ミニロト") || fullText.includes("miniloto") || fullText.includes("mini loto")) {
+                detectedGame = "miniloto";
+            } else if (fullText.includes("ナンバーズ3") || fullText.includes("numbers3")) {
+                detectedGame = "numbers3";
+            } else if (fullText.includes("ナンバーズ4") || fullText.includes("numbers4")) {
+                detectedGame = "numbers4";
+            }
+
+            const cfg = GAME_CONFIG[detectedGame];
+            const parsedHistory = [];
+            const startIdx = hasHeader ? 1 : 0;
+
+            for (let i = startIdx; i < lines.length; i++) {
+                const row = splitCSVLine(lines[i]);
+                if (row.length < 3) continue;
+
+                const round = parseInt(row[roundIdx], 10);
+                if (isNaN(round)) continue;
+                
+                const date = dateIdx !== -1 && dateIdx < row.length ? row[dateIdx] : "";
+                let numbers = [];
+                let bonus = [];
+
+                if (cfg.isNumbers) {
+                    let numStr = "";
+                    const numIdx = firstRow.findIndex(h => h.includes("抽選数字") || h.includes("当選番号"));
+                    if (numIdx !== -1 && numIdx < row.length) {
+                        numStr = row[numIdx];
+                    } else {
+                        numStr = row.find((val, idx) => idx > roundIdx && /^\d{3,4}$/.test(val.replace(/\D/g, ""))) || "";
+                    }
+                    numStr = numStr.replace(/\D/g, "");
+                    numbers = numStr.split("").map(Number);
+                } else {
+                    if (hasHeader) {
+                        for (let p = 1; p <= cfg.pick; p++) {
+                            const idx = firstRow.findIndex(h => h.includes(`第${p}`));
+                            if (idx !== -1 && idx < row.length && row[idx]) {
+                                numbers.push(parseInt(row[idx], 10));
+                            }
+                        }
+                        if (detectedGame === "loto7") {
+                            const b1Idx = firstRow.findIndex(h => h.includes("ボーナス数字1") || h.includes("ボーナス1"));
+                            const b2Idx = firstRow.findIndex(h => h.includes("ボーナス数字2") || h.includes("ボーナス2"));
+                            if (b1Idx !== -1 && b1Idx < row.length && row[b1Idx]) bonus.push(parseInt(row[b1Idx], 10));
+                            if (b2Idx !== -1 && b2Idx < row.length && row[b2Idx]) bonus.push(parseInt(row[b2Idx], 10));
+                        } else {
+                            const bIdx = firstRow.findIndex(h => h.includes("ボーナス"));
+                            if (bIdx !== -1 && bIdx < row.length && row[bIdx]) bonus.push(parseInt(row[bIdx], 10));
+                        }
+                    }
+                }
+                
+                if (numbers.length !== cfg.pick) {
+                    const allRowNums = row.map(v => parseInt(v, 10)).filter(v => !isNaN(v) && v >= (cfg.isNumbers ? 0 : 1) && v <= cfg.maxVal);
+                    numbers = allRowNums.filter(v => v !== round).slice(0, cfg.pick);
+                }
+
+                if (numbers.length === cfg.pick && !numbers.some(isNaN)) {
+                    if (!cfg.isNumbers) {
+                        numbers.sort((a, b) => a - b);
+                    }
+                    parsedHistory.push({ round, date, numbers, bonus });
+                }
+            }
+
+            if (parsedHistory.length === 0) {
+                throw new Error(`有効な履歴レコードを読み込めませんでした。本数字の個数(${cfg.pick}個)や数値範囲が「${detectedGame}」と一致しているかご確認ください。`);
+            }
+
+            if (!customHistory[detectedGame]) customHistory[detectedGame] = [];
+            
+            const existingRounds = new Set(customHistory[detectedGame].map(item => item.round));
+            parsedHistory.forEach(item => {
+                if (existingRounds.has(item.round)) {
+                    customHistory[detectedGame] = customHistory[detectedGame].filter(x => x.round !== item.round);
+                }
+                customHistory[detectedGame].push(item);
+            });
+
+            saveLocalHistory();
+            alert(`CSVから 「${detectedGame}」の過去データを ${parsedHistory.length} 件インポートしました！`);
+            closeImportModal();
+
+            if (detectedGame !== selectedGame) {
+                selectedGame = detectedGame;
+                const btns = document.querySelectorAll('.game-btn');
+                btns.forEach(btn => {
+                    const onclickStr = btn.getAttribute('onclick') || '';
+                    if (onclickStr.includes(detectedGame)) {
+                        selectGame(detectedGame, btn);
+                    }
+                });
+            } else {
+                runAnalysis();
+            }
+        }
+
+        function initCSVImport() {
+            const dropZone = document.getElementById("drop-zone");
+            const fileInput = document.getElementById("file-input");
+            if (!dropZone || !fileInput) return;
+            
+            const newDropZone = dropZone.cloneNode(true);
+            dropZone.parentNode.replaceChild(newDropZone, dropZone);
+            
+            const newFileInput = newDropZone.querySelector("#file-input");
+            
+            newDropZone.addEventListener("click", () => newFileInput.click());
+            
+            newDropZone.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                newDropZone.classList.add("dragover");
+            });
+            
+            newDropZone.addEventListener("dragleave", () => {
+                newDropZone.classList.remove("dragover");
+            });
+            
+            newDropZone.addEventListener("drop", (e) => {
+                e.preventDefault();
+                newDropZone.classList.remove("dragover");
+                if (e.dataTransfer.files.length > 0) {
+                    handleCSVFile(e.dataTransfer.files[0]);
+                }
+            });
+            
+            newFileInput.addEventListener("change", (e) => {
+                if (e.target.files.length > 0) {
+                    handleCSVFile(e.target.files[0]);
+                }
+            });
         }
     </script>
 
